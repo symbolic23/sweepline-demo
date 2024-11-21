@@ -29,6 +29,10 @@ var num_lines = 1
 // Sweepline use
 var segment_list = []
 var event_queue = []
+var intersections = []
+var labels = "abcdefghijklmnopqrstvuwxyz" // the best labels there ever were
+
+var intersections_bf = [] // brute-force intersections
 
 // ----- line generation -----
 
@@ -134,6 +138,15 @@ function draw_line(x1, y1, x2, y2, color, width) {
     ctx.fillStyle = old_fill
 }
 
+function draw_point(x, y, color, width) {
+    var old_fill = ctx.fillStyle
+    ctx.beginPath()
+    ctx.arc(x, y, width, 0, 2 * Math.PI)
+    ctx.fillStyle = color;
+    ctx.fill()
+    ctx.fillStyle = old_fill
+}
+
 function draw_axes() {
     draw_line(origin_x, 0, origin_x, canvas.height, "black", 4)
     draw_line(0, origin_y, canvas.width, origin_y, "black", 4)
@@ -156,9 +169,9 @@ function reset_grid() {
     draw_ticks(x_tick_px, y_tick_px)
 }
 
-// Draws n segments (ideally).
-function draw_segments(n) {
-    for (var i = 0; i < n; i++) {
+// Draws all the line segments (ideally).
+function draw_segments() {
+    for (var i = 0; i < lines.length; i++) {
         var [x1, y1] = point_to_canvas(lines[i][0][0], lines[i][0][1])
         var [x2, y2] = point_to_canvas(lines[i][1][0], lines[i][1][1])
         // console.log(x1, x2, y1, y2)
@@ -166,18 +179,61 @@ function draw_segments(n) {
     }
 }
 
+// Draws all the (coordinate system) points given.
+function draw_intersections(arr) {
+    for (var i = 0; i < arr.length; i++) {
+        var [xi, yi] = point_to_canvas(arr[i][0], arr[i][1])
+        draw_point(xi, yi, "blue", 4)
+    }
+}
+
 // Rebuilds the drawing of the canvas demo.
 function reconstruct_demo(n) {
     reset_grid()
     generate_lines(n, 20)
-    draw_segments(n)
+    draw_segments()
 }
 
 // ----- Sweepline magic ----
 
+// As before, lines are formatted as [[x1, y1], [x2, y2]] because JS has a very good type system.
+function slope_intercept(line) {
+    var m = (line[1][1] - line[0][1]) / (line[1][0] - line[0][0])
+    var b = line[1][1] - m * line[1][0]
+    return [m, b]
+}
+
+// returns a point [x, y] or null if no intersection
+function check_intersection(l1, l2) {
+    var [m1, b1] = slope_intercept(l1)
+    var [m2, b2] = slope_intercept(l2)
+    if (m1 == m2) return null;
+    // m1 * x + b1 = m2 * x + b2
+    var x = (b1 - b2) / (m2 - m1)
+    var x_lb = Math.max(Math.min(l1[0][0], l1[1][0]), Math.min(l2[0][0], l2[1][0]))
+    var x_ub = Math.min(Math.max(l1[0][0], l1[1][0]), Math.max(l2[0][0], l2[1][0]))
+    if (x <= x_lb || x >= x_ub) return null;
+    return [x, m1 * x + b1]
+}
+
+// Check all intersections in the input set of lines by brute-force.
+function check_intersections_bf() {
+    intersections_bf = []
+    for (var i = 0; i < lines.length; i++) {
+        for (var j = i + 1; j < lines.length; j++) {
+            var inter = check_intersection(lines[i], lines[j])
+            if (inter != null) intersections_bf.push(inter)
+        }
+    }
+}
+
 function run_sweepline() {
     var n = $('#num_lines').val()
     reconstruct_demo(n)
+
+    // brute-forcing
+    check_intersections_bf()
+    draw_intersections(intersections_bf)
 }
 
 // ----- jQuery -----
