@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Sweepline Demo</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="sweepline.js"></script>
+</head>
+<body>
+
+<div class="titlecard">
+    Sweepline Demo
+</div>
+
+<div class="grid_area">
+    <canvas id="grid" width="500" height="500"></canvas>
+</div>
+
+<div class="output">
+    <div id="total_intersections"></div>
+    <div id="segment_list"></div>
+    <div id="event_queue"></div>
+</div>
+
+<div class="settings">
+    <table>
+        <tr>
+            <td><label for="num_lines">Number of lines:</label></td>
+            <td><input type="number" id="num_lines" name="num_lines" min="1" max="50"></td>
+            <td><button id="guess_button" onclick="run_sweepline()">Regenerate lines</button></td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>
