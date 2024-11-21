@@ -44,30 +44,52 @@ function gcd(a, b) {
     return a
 }
 
+function new_point() {
+    // generate x/y coordinates from 1 to their max values
+    var x = Math.floor(Math.random() * x_max) + 1
+    var y = Math.floor(Math.random() * y_max) + 1
+    return [x, y]
+}
+
+// the above, but avoid picking a close x-coordinate
+// I initially just regenerated points arbitrarily, but that is so wasteful.
+function new_second_point(x1, x_threshold) {
+    // generate x/y coordinates from 1 to their max values
+    if (x1 < x_threshold) {
+        // [x1 + x_threshold, x_max]
+        x = Math.floor(Math.random() * (x_max - x1 - x_threshold + 1)) + x1 + x_threshold
+    }
+    else if (x_max - x1 < x_threshold) {
+        // [1, x1 - x_threshold]
+        x = Math.floor(Math.random() * (x1 - x_threshold)) + 1
+    }
+    else {
+        // [1, x1 - x_threshold] U [x1 + x_threshold, x_max]
+        // The way I do this is by picking from x_max - 2 * x_threshold + 1 choices and adding if needed.
+        x = Math.floor(Math.random() * (x_max - 2 * x_threshold + 1))
+        x += (x < x1 - x_threshold) ? 1 : (2 * x_threshold)
+    }
+    y = Math.floor(Math.random() * y_max) + 1
+    return [x, y]
+}
+
 // Generate n random line segments in the context of the problem.
 // The conditions to make this work are that there are no vertical lines, and no endpoint is on another line segment.
 // There are probably cool ways of doing this, but I've chosen to cut corners here: any line's dx and dy are relatively prime.
 // This is just intended to ensure there are no integer coordinate points inside a line, so only endpoint checks are needed.
 
-// x_threshold can be set indicating the minimum dx, so as to avoid stupidly short/vertical lines for aesthetics.
-function generate_lines(n, x_threshold = 0) {
+// x_threshold can be set indicating the minimum allowed dx, so as to avoid stupidly short/vertical lines for aesthetics.
+function generate_lines(n, x_threshold = 1) {
     var endpoints = []
-    function new_point() {
-        // generate x/y coordinates from 1 to their max values
-        var x = Math.floor(Math.random() * x_max) + 1
-        var y = Math.floor(Math.random() * y_max) + 1
-        while ([x, y] in endpoints) {
-            x = Math.floor(Math.random() * x_max) + 1
-            y = Math.floor(Math.random() * y_max) + 1
-        }
-        return [x, y]
-    }
     for (var i = 0; i < n; i++) {
         var [x1, y1] = new_point()
-        var [x2, y2] = new_point()
-        while (Math.abs(x2 - x1) <= x_threshold || y1 == y2 || (gcd(x2 - x1, y2 - x1) != 1)) {
+        while ([x1, y1] in endpoints) {
             [x1, y1] = new_point()
-            [x2, y2] = new_point()
+        }
+        var [x2, y2] = new_second_point(x1, x_threshold)
+        while ([x2, y2] in endpoints || Math.abs(x2 - x1) <= x_threshold
+            || y1 == y2 || (gcd(x2 - x1, y2 - x1) != 1)) {
+            [x2, y2] = new_second_point(x1, x_threshold) // only need to regenerate one of these
         }
         endpoints.push([x1, y1])
         endpoints.push([x2, y2])
@@ -152,6 +174,11 @@ function reconstruct_demo(n) {
 }
 
 // ----- Sweepline magic ----
+
+function run_sweepline() {
+    var n = $('#num_lines').val()
+    reconstruct_demo(n)
+}
 
 // ----- jQuery -----
 // https://stackoverflow.com/questions/30948387/number-only-input-box-with-range-restriction
