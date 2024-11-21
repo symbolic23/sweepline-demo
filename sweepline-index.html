@@ -4,17 +4,25 @@
     <meta charset="utf-8">
     <title>Sweepline Demo</title>
     <link rel="stylesheet" href="style.css">
-
+    <script src="jquery-3.7.1.min.js"></script>
     <script src="sweepline.js"></script>
 </head>
+
 <body>
 
 <div class="titlecard">
-    Sweepline Demo
+    <div id="status">
+        Sweepline Demo
+    </div>
 </div>
 
 <div class="grid_area">
-    <canvas id="grid" width="500" height="500"></canvas>
+    <canvas id="canvas" width="600" height="400"></canvas>
+
+    <script>
+        init_canvas();
+        reset_grid();
+    </script>
 </div>
 
 <div class="output">
@@ -27,8 +35,8 @@
     <table>
         <tr>
             <td><label for="num_lines">Number of lines:</label></td>
-            <td><input type="number" id="num_lines" name="num_lines" min="1" max="50"></td>
-            <td><button id="guess_button" onclick="run_sweepline()">Regenerate lines</button></td>
+            <td><input type="number" id="num_lines" name="num_lines" min="1" max="20"></td>
+            <td><button id="run_button" onclick="run_sweepline()">Regenerate lines</button></td>
         </tr>
     </table>
 </div>
