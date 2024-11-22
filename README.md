@@ -8,4 +8,4 @@ You can initialize some number of lines from 1 to 20. The "Process event" line l
 
 Sources used:
 
-No major sources. Citations for minor functionality are linked where necessary.
+No major sources. Citations for minor functionality (such as jQuery) are linked where necessary.

@@ -1,5 +1,5 @@
 /**
- * Sweepline - Yoseph Mak
+ * Sweepline - Yoseph Mak (symbolic23)
  * Demonstration of the sweepline algorithm on an HTML webpage.
  * I guess this code is by default public.
  * However, if you want to use it for some reason, then do keep in mind that it is in JavaScript, everyone's favorite language.
