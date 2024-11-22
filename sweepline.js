@@ -23,7 +23,7 @@ var y_spacing = 5
 var x_tick_px = 50
 var y_tick_px = 50
 
-var horizontal = 15; // min horizontal distance between points in line segments
+var horizontal = 20; // min horizontal distance between points in line segments
 
 // The actual lines.
 var lines = []
