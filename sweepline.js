@@ -17,13 +17,13 @@ var origin_y = 25 // px
 // This is the bounds (in coordinate system language) for where points for the lines exist.
 var x_max = 75
 var x_spacing = 5
-var y_max = 30
+var y_max = 28
 var y_spacing = 5
 
 var x_tick_px = 50
 var y_tick_px = 50
 
-var horizontal = 20; // min horizontal distance between points
+var horizontal = 15; // min horizontal distance between points in line segments
 
 // The actual lines.
 var lines = []
@@ -38,6 +38,7 @@ var current_x = -100
 var current_event = null
 
 var intersections_bf = [] // brute-force intersections
+var key_lines = [] // highlight some lines
 
 // ----- useful functions -----
 
@@ -225,7 +226,7 @@ function reset_grid() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     set_canvas_bg()
     draw_axes()
-    draw_ticks(x_tick_px, y_tick_px)
+    // draw_ticks(x_tick_px, y_tick_px)
 }
 
 // Draws all the line segments (ideally).
@@ -234,6 +235,11 @@ function draw_segments() {
         var [x1, y1] = point_to_canvas(lines[i][0][0], lines[i][0][1])
         var [x2, y2] = point_to_canvas(lines[i][1][0], lines[i][1][1])
         draw_line(x1, y1, x2, y2, "gray", 1)
+    }
+    for (var j = 0; j < key_lines.length; j++) {
+        var [x1, y1] = point_to_canvas(lines[key_lines[j]][0][0], lines[key_lines[j]][0][1])
+        var [x2, y2] = point_to_canvas(lines[key_lines[j]][1][0], lines[key_lines[j]][1][1])
+        draw_line(x1, y1, x2, y2, "gray", 2)
     }
 }
 
@@ -262,7 +268,23 @@ function redraw_sweepline_grid() {
     draw_intersections(intersections, "red", 4)
 
     // the sweep line
-    draw_line(current_x_px, 0, current_x_px, canvas.height, "green", 1)
+    // segment list labels may be in order
+    if (document.getElementById("sl_button").checked) {
+        var label_y = origin_y - (y_max / y_spacing) * y_tick_px;
+        draw_line(current_x_px, origin_y, current_x_px, label_y, "green", 1)
+        
+        ctx.font = "12px Arial"
+        ctx.fillStyle = "green"
+        ctx.textAlign = "center"
+        label_y -= 10
+        for (var i = segment_list.length - 1; i >= 0; i--) {
+            ctx.fillText(labels[segment_list[i]], current_x_px, label_y)
+            label_y -= 12
+        }
+    }
+    else {
+        draw_line(current_x_px, origin_y, current_x_px, 0, "green", 1)
+    }
 
     var [ex, ey] = get_event_point(current_event)
     var ex_px = origin_x + (ex / x_spacing) * x_tick_px
@@ -303,6 +325,7 @@ function check_intersections_bf() {
 }
 
 function generate_problem() {
+    key_lines = []
     var n = $('#num_lines').val()
     reconstruct_demo(n)
     init_sweepline()
@@ -371,7 +394,9 @@ function step_sweepline() {
     if (event_queue.length == 0) {
         current_x = 100
         current_event = null
+        key_lines = []
         redraw_sweepline_grid()
+        update_sweepline_divs()
         return
     }
 
@@ -399,6 +424,8 @@ function step_sweepline() {
         }
         return y1 >= y2
     }
+
+    key_lines = (evt[1] == "intersection") ? [evt[2], evt[3]] : [evt[2]]
 
     // assume i < j
     function check_and_insert(i, j) {
@@ -487,15 +514,15 @@ function run_sweepline() {
 
 function event_str(evt) {
     if (evt == null) return "-"
-    var res = "x = " + round(evt[0], 3)
+    var res = "" // "x = " + round(evt[0], 3)
     if (evt[1] == "enter") {
-        res += "; line " + labels[evt[2]] + " starts"
+        res += "Line " + labels[evt[2]] + " starts"
     }
     else if (evt[1] == "exit") {
-        res += "; line " + labels[evt[2]] + " ends"
+        res += "Line " + labels[evt[2]] + " ends"
     }
     else if (evt[1] == "intersection") {
-        res += "; lines " + labels[evt[2]] + " and " + labels[evt[3]] + " intersect"
+        res += "Lines " + labels[evt[2]] + " and " + labels[evt[3]] + " intersect"
     }
     return res
 }
@@ -515,6 +542,11 @@ function update_event_queue_div() {
         document.getElementById("event_queue").innerHTML = ""
         return
     }
+    if (event_queue.length == 0) {
+        document.getElementById("event_queue").innerHTML = "Event queue: -"
+        return
+    }
+
     var eq_open = "Event queue:\n<ul>\n"
     var eq_close = "</ul>"
 
