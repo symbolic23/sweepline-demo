@@ -325,7 +325,7 @@ function check_intersections_bf() {
 }
 
 function generate_problem() {
-    key_lines = []
+    reset_sweepline()
     var n = $('#num_lines').val()
     reconstruct_demo(n)
     init_sweepline()
@@ -337,6 +337,8 @@ function reset_sweepline() {
     event_queue = []
     intersections = []
     intersections_bf = []
+    key_lines = []
+    current_event = null
 }
 
 /**
