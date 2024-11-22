@@ -30,12 +30,22 @@ input {
     text-align: center;
 }
 
+.check {
+    width: 25px;
+    height: 25px;
+}
+
 button {
     font-size: 18pt;
     height: 50px;
     background-color: darkgrey;
     border: 2px solid darkslategrey;
     border-radius: 5px;
+}
+
+ul {
+    text-align: left;
+    padding-left: 30%;
 }
 
 #gen_button {

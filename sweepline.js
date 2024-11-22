@@ -35,6 +35,7 @@ var event_queue = []
 var intersections = []
 var labels = "abcdefghijklmnopqrstvuwxyz" // the best labels there ever were
 var current_x = -100
+var current_event = null
 
 var intersections_bf = [] // brute-force intersections
 
@@ -50,6 +51,11 @@ function gcd(a, b) {
         b = r
     }
     return a
+}
+
+// https://stackoverflow.com/questions/15762768/javascript-math-round-to-two-decimal-places
+function round(value, decimals) {
+    return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
 }
 
 /**
@@ -70,9 +76,29 @@ function binarySearch(array, pred) {
 }
 
 // comparator: comp(a, b) => a < b (basically)
+// return the index
+function find_place(arr, comp, e) {
+    var i = binarySearch(arr, x => comp(e, x))
+    return i
+}
+
+// comparator: comp(a, b) => a < b (basically)
+// return the index where it was inserted
+// does not insert if the element already exists
 function insert_into(arr, comp, e) {
     var i = binarySearch(arr, x => comp(e, x))
     arr.splice(i, 0, e)
+    return i
+}
+
+// deletion, if the element exists
+function delete_from(arr, comp, e) {
+    var i = binarySearch(arr, x => comp(e, x))
+    if (arr[i] == e) {
+        arr.splice(i, 1)
+        return i
+    }
+    return -1
 }
 
 // ----- line generation -----
@@ -207,7 +233,6 @@ function draw_segments() {
     for (var i = 0; i < lines.length; i++) {
         var [x1, y1] = point_to_canvas(lines[i][0][0], lines[i][0][1])
         var [x2, y2] = point_to_canvas(lines[i][1][0], lines[i][1][1])
-        // console.log(x1, x2, y1, y2)
         draw_line(x1, y1, x2, y2, "gray", 1)
     }
 }
@@ -233,11 +258,16 @@ function redraw_sweepline_grid() {
     draw_segments()
     var current_x_px = origin_x + (current_x / x_spacing) * x_tick_px
 
-    draw_intersections(intersections_bf, "blue", 3)
+    if (document.getElementById("brute_force").checked) draw_intersections(intersections_bf, "blue", 3)
     draw_intersections(intersections, "red", 4)
 
     // the sweep line
     draw_line(current_x_px, 0, current_x_px, canvas.height, "green", 1)
+
+    var [ex, ey] = get_event_point(current_event)
+    var ex_px = origin_x + (ex / x_spacing) * x_tick_px
+    var ey_px = origin_y - (ey / y_spacing) * y_tick_px
+    draw_point(ex_px, ey_px, "green", 4)
 }
 
 // ----- Sweepline magic ----
@@ -276,6 +306,7 @@ function generate_problem() {
     var n = $('#num_lines').val()
     reconstruct_demo(n)
     init_sweepline()
+    update_sweepline_divs()
 }
 
 function reset_sweepline() {
@@ -287,14 +318,14 @@ function reset_sweepline() {
 
 /**
  * Event format:
- * [x, "enter"/"leave"/"intersection", i, (j for intersection)]
+ * [x, "enter"/"leave"/"intersection", i, (j for intersection), (intersection coords)]
  * Segment list will just use indices.
  */
 
 // priority: enter before intersection before leave
 function compare_events(a, b) {
     if (a[0] != b[0]) return a[0] < b[0]
-    return a[1] < b[1] // convenient string hack
+    return a[1] <= b[1] // convenient string hack
 }
 
 // compare lines by left point
@@ -305,9 +336,9 @@ function compare_lines(a, b) {
 
 function init_sweepline() {
     reset_sweepline()
+    check_intersections_bf()
     if (document.getElementById("brute_force").checked) {
-        // brute-forcing
-        check_intersections_bf()
+        // draw brute-force choices
         draw_intersections(intersections_bf, "blue", 3)
     }
 
@@ -320,33 +351,129 @@ function init_sweepline() {
     current_x = -100
 }
 
+// Get the point in coordinates where the event takes place
+function get_event_point(evt) {
+    if (evt == null) return [100, 100]
+    if (evt[1] == "enter") {
+        return lines[evt[2]][0]
+    }
+    else if (evt[1] == "exit") {
+        return lines[evt[2]][1]
+    }
+    else if (evt[1] == "intersection") {
+        return evt[4]
+    }
+}
+
 // Run a single step of the event queue.
 // Good for demonstration purposes.
 function step_sweepline() {
-    if (event_queue.length == 0) return
+    if (event_queue.length == 0) {
+        current_x = 100
+        current_event = null
+        redraw_sweepline_grid()
+        return
+    }
 
     // debug
     console.log(event_queue)
     console.log(segment_list)
 
     var evt = event_queue[0]
+    current_event = evt
     event_queue.splice(0, 1)
+
+    console.log("Processing " + evt)
 
     // compare lines of index i, j SL style
     // format is top-to-bottom
-    current_x = evt[0]
+    current_x = evt[0] // for safety in intersection checking
     function compare_SL(i, j) {
         var [m1, b1] = slope_intercept(lines[i])
         var [m2, b2] = slope_intercept(lines[j])
-        return (m1 * current_x + b1) > (m2 * current_x + b2)
+        var y1 = (m1 * current_x + b1)
+        var y2 = (m2 * current_x + b2)
+        if (Math.abs(y2, y1) <= 0.0005) {
+            // intersection floating point nonsense
+            return m1 >= m2
+        }
+        return y1 >= y2
+    }
+
+    // assume i < j
+    function check_and_insert(i, j) {
+        var inter = check_intersection(lines[i], lines[j])
+        if (inter != null && inter[0] > current_x) {
+            var int_event = [inter[0], "intersection", i, j, inter]
+            // Verify that this event doesn't already exist
+            var loc = find_place(event_queue, compare_events, int_event)
+            if (event_queue[loc][2] == i && event_queue[loc][3] == j) return
+            insert_into(event_queue, compare_events,
+                    [inter[0], "intersection", i, j, inter])
+        }
     }
     
     if (evt[1] == "enter") {
-        // var line = lines[evt[2]]
-        insert_into(segment_list, compare_SL, evt[2])
+        var sl_index = insert_into(segment_list, compare_SL, evt[2])
+        var current = evt[2]
+        if (sl_index != 0) {
+            var previous = segment_list[sl_index - 1]
+            check_and_insert(previous, current)
+        }
+        if (sl_index != segment_list.length - 1) {
+            var next = segment_list[sl_index + 1]
+            check_and_insert(current, next)
+        }
+    }
+    else if (evt[1] == "exit") {
+        var sl_index = delete_from(segment_list, compare_SL, evt[2])
+        if (0 < sl_index && sl_index < segment_list.length) {
+            var previous = segment_list[sl_index - 1]
+            var next = segment_list[sl_index]
+            check_and_insert(previous, next)
+        }
+    }
+    else if (evt[1] == "intersection") {
+        var sl1 = find_place(segment_list, compare_SL, evt[2])
+        var sl2 = find_place(segment_list, compare_SL, evt[3])
+
+        // annoying floating-point checks for fixing the location of intersections
+        if (segment_list[sl1] == evt[2]) {
+            sl2 = sl1 + 1
+        }
+        else if (segment_list[sl1] == evt[3]) {
+            sl1 = sl2
+            sl2 = sl1 + 1
+        }
+        else if (segment_list[sl2] == evt[2]) {
+            sl1 = sl2
+            sl2 = sl1 + 1
+        }
+        else if (segment_list[sl2] == evt[3]) {
+            sl1 = sl2 - 1
+        }
+        else {
+            console.log("Intersection locations don't seem adjacent: " + sl1 + ", " + sl2)
+        }
+        
+        segment_list[sl2] = evt[2]
+        segment_list[sl1] = evt[3]
+        intersections.push(evt[4])
+
+        if (sl1 != 0) {
+            var previous = segment_list[sl1 - 1]
+            var current_left = segment_list[sl1]
+            check_and_insert(previous, current_left)
+        }
+        if (sl2 != segment_list.length - 1) {
+            var current_right = segment_list[sl2]
+            var next = segment_list[sl2 + 1]
+            check_and_insert(current_right, next)
+        }
     }
 
     redraw_sweepline_grid() // necessary drawing command
+    update_sweepline_divs()
 }
 
 function run_sweepline() {
@@ -356,7 +483,59 @@ function run_sweepline() {
     }
 }
 
-// ----- jQuery -----
+// ----- HTML interaction -----
+
+function event_str(evt) {
+    if (evt == null) return "-"
+    var res = "x = " + round(evt[0], 3)
+    if (evt[1] == "enter") {
+        res += "; line " + labels[evt[2]] + " starts"
+    }
+    else if (evt[1] == "exit") {
+        res += "; line " + labels[evt[2]] + " ends"
+    }
+    else if (evt[1] == "intersection") {
+        res += "; lines " + labels[evt[2]] + " and " + labels[evt[3]] + " intersect"
+    }
+    return res
+}
+
+function update_current_event_div() {
+    document.getElementById("current_event").innerHTML = "Current event: " + event_str(current_event)
+}
+
+function update_intersection_ct_div() {
+    var intersection_text = "Intersections found: " + intersections.length
+    var bf_addition = document.getElementById("brute_force").checked ? " / " + intersections_bf.length : ""
+    document.getElementById("total_intersections").innerHTML = intersection_text + bf_addition
+}
+
+function update_event_queue_div() {
+    if (!document.getElementById("eq_button").checked) {
+        document.getElementById("event_queue").innerHTML = ""
+        return
+    }
+    var eq_open = "Event queue:\n<ul>\n"
+    var eq_close = "</ul>"
+
+    var eq_inner = ""
+    for (var i = 0; i < event_queue.length; i++) {
+        eq_inner += "<li>" + event_str(event_queue[i]) + "</li>\n"
+    }
+    document.getElementById("event_queue").innerHTML = eq_open + eq_inner + eq_close
+}
+
+function update_segment_list_display() {
+
+}
+
+function update_sweepline_divs() {
+    update_current_event_div()
+    update_intersection_ct_div()
+    update_event_queue_div()
+    update_segment_list_display()
+}
+
 // https://stackoverflow.com/questions/30948387/number-only-input-box-with-range-restriction
 $(document).ready(function() {
     $('#num_lines').change(function() {
@@ -365,5 +544,25 @@ $(document).ready(function() {
         $('#num_lines').val(1)
       if (n > 20)
         $('#num_lines').val(20)
+    })
+})
+
+$(document).ready(function() {
+    $('#brute_force').change(function() {
+        redraw_sweepline_grid() // necessary drawing command
+        update_intersection_ct_div()
+    })
+})
+
+$(document).ready(function() {
+    $('#eq_button').change(function() {
+        update_event_queue_div()
+    })
+})
+
+$(document).ready(function() {
+    $('#sl_button').change(function() {
+        redraw_sweepline_grid() // necessary drawing command
+        update_segment_list_display()
     })
 })
