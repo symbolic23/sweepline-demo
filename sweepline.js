@@ -251,10 +251,17 @@ function draw_intersections(arr, color, width = 1) {
     }
 }
 
-// Rebuilds the drawing of the canvas demo.
+// Rebuilds the demo with new lines and draws it in.
 function reconstruct_demo(n) {
     reset_grid()
     generate_lines(n, horizontal)
+    draw_segments()
+}
+
+// Resets the demo using the current set of lines.
+// Good in case you make a mistake while presenting this demo. I mean, what?
+function soft_reset() {
+    reset_grid()
     draw_segments()
 }
 
@@ -329,6 +336,13 @@ function generate_problem() {
     var n = $('#num_lines').val()
     reconstruct_demo(n)
     init_sweepline()
+    update_sweepline_divs()
+}
+
+function reset_algorithm() {
+    reset_sweepline()
+    init_sweepline()
+    redraw_sweepline_grid()
     update_sweepline_divs()
 }
 

@@ -21,7 +21,8 @@
         <tr>
             <td><label for="num_lines">Number of lines:</label></td>
             <td><input type="number" id="num_lines" name="num_lines" min="1" max="20" value="6"></td>
-            <td><button id="gen_button" onclick="generate_problem()">Regenerate lines</button></td>
+            <td><button id="gen_button" onclick="generate_problem()">New lines</button></td>
+            <td><button id="step_button" onclick="reset_algorithm()">Reset algorithm</button></td>
             <td><button id="step_button" onclick="step_sweepline()">Process event</button></td>
             <td><button id="run_button" onclick="run_sweepline()">Run fully</button></td>
         </tr>
