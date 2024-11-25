@@ -417,14 +417,14 @@ function step_sweepline() {
     }
 
     // debug
-    console.log(event_queue)
-    console.log(segment_list)
+    // console.log(event_queue)
+    // console.log(segment_list)
 
     var evt = event_queue[0]
     current_event = evt
     event_queue.splice(0, 1)
 
-    console.log("Processing " + evt)
+    // console.log("Processing " + evt)
 
     // compare lines of index i, j SL style
     // format is top-to-bottom
